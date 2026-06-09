@@ -267,3 +267,33 @@ type ModifyTeamPolicyResponse struct {
 }
 
 func (r ModifyTeamPolicyResponse) Error() error { return r.Err }
+
+/////////////////////////////////////////////////////////////////////////////////
+// Policy Automation Activities - List
+/////////////////////////////////////////////////////////////////////////////////
+
+// PolicyAutomationActivity is a fleet.Activity enriched with the host it
+// belongs to, as recorded in activity_host_past.
+type PolicyAutomationActivity struct {
+	Activity
+	HostID          uint   `json:"host_id" db:"host_id"`
+	HostDisplayName string `json:"host_display_name" db:"host_display_name"`
+}
+
+// ListPolicyAutomationActivitiesRequest is the request type for
+// GET /api/_version_/fleet/policies/{policy_id}/automation_activities.
+type ListPolicyAutomationActivitiesRequest struct {
+	PolicyID uint        `url:"policy_id"`
+	Opts     ListOptions `url:"list_options"`
+	// Status filters by outcome: "error" (failed_* types), "success" (positive
+	// types), or empty (all types). Any other value returns HTTP 422.
+	Status string `query:"status,optional"`
+}
+
+type ListPolicyAutomationActivitiesResponse struct {
+	Activities []*PolicyAutomationActivity `json:"activities"`
+	Meta       *PaginationMetadata         `json:"meta"`
+	Err        error                       `json:"error,omitempty"`
+}
+
+func (r ListPolicyAutomationActivitiesResponse) Error() error { return r.Err }
