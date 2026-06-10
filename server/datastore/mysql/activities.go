@@ -1601,9 +1601,8 @@ const policyAutomationHostJoin = `
 type policyAutomationTaskBranch struct {
 	// activityType is the activity_past.activity_type this branch matches.
 	activityType string
-	// joins are the additional JOINs binding the result table (and
-	// policy_membership) to the policy. They contain exactly one placeholder,
-	// for the policy ID.
+	// joins are the additional JOINs binding the result table to the policy.
+	// They contain exactly one placeholder, for the policy ID.
 	joins string
 	// errorCond and successCond are the WHERE fragments selecting failed and
 	// successful tasks respectively. They are wrapped in parentheses when
@@ -1622,10 +1621,7 @@ var policyAutomationTaskBranches = []policyAutomationTaskBranch{
             INNER JOIN host_script_results hsr
                 ON  hsr.host_id      = ahp.host_id
                 AND hsr.execution_id = ap.details->>'$.script_execution_id'
-                AND hsr.policy_id    = ?
-            INNER JOIN policy_membership pm
-                ON  pm.host_id   = ahp.host_id
-                AND pm.policy_id = hsr.policy_id`,
+                AND hsr.policy_id    = ?`,
 		errorCond:   "hsr.exit_code IS NOT NULL AND hsr.exit_code != 0",
 		successCond: "hsr.exit_code = 0",
 	},
@@ -1635,10 +1631,7 @@ var policyAutomationTaskBranches = []policyAutomationTaskBranch{
             INNER JOIN host_software_installs hsi
                 ON  hsi.host_id      = ahp.host_id
                 AND hsi.execution_id = ap.details->>'$.install_uuid'
-                AND hsi.policy_id    = ?
-            INNER JOIN policy_membership pm
-                ON  pm.host_id   = ahp.host_id
-                AND pm.policy_id = hsi.policy_id`,
+                AND hsi.policy_id    = ?`,
 		errorCond:   "hsi.status = 'failed_install'",
 		successCond: "hsi.status = 'installed'",
 	},
@@ -1649,9 +1642,6 @@ var policyAutomationTaskBranches = []policyAutomationTaskBranch{
                 ON  hvsi.host_id      = ahp.host_id
                 AND hvsi.command_uuid = ap.details->>'$.command_uuid'
                 AND hvsi.policy_id    = ?
-            INNER JOIN policy_membership pm
-                ON  pm.host_id   = ahp.host_id
-                AND pm.policy_id = hvsi.policy_id
             LEFT JOIN nano_command_results ncr
                 ON  ncr.command_uuid = hvsi.command_uuid
                 AND ncr.id = (SELECT uuid FROM hosts WHERE id = ahp.host_id)`,

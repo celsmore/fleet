@@ -2402,6 +2402,9 @@ func testListPolicyAutomationActivities(t *testing.T, ds *Datastore) {
 			if extra[0].Page != 0 {
 				opts.Page = extra[0].Page
 			}
+			if extra[0].MatchQuery != "" {
+				opts.MatchQuery = extra[0].MatchQuery
+			}
 		}
 		return opts
 	}
@@ -2550,12 +2553,6 @@ func testListPolicyAutomationActivities(t *testing.T, ds *Datastore) {
 		_, _ = ds.writer(ctx).ExecContext(ctx, "SET FOREIGN_KEY_CHECKS=1")
 	}()
 
-	// policy_membership row so the INNER JOIN in branches 2-4 finds a match.
-	_, err = ds.writer(ctx).ExecContext(ctx,
-		`INSERT INTO policy_membership (policy_id, host_id, passes) VALUES (?, ?, ?)`,
-		policy.ID, h1.ID, false)
-	require.NoError(t, err)
-
 	// ── ran_script ────────────────────────────────────────────────────────────
 	scriptSuccessExecID := "script-success-exec-1"
 	scriptFailureExecID := "script-failure-exec-1"
@@ -2667,6 +2664,24 @@ func testListPolicyAutomationActivities(t *testing.T, ds *Datastore) {
 			types["created_calendar_event_policy_automation"]+
 			types["blocked_single_sign_on_policy_automation"])
 		// Script/software/VPP successes present.
+		require.Positive(t, types["ran_script"])
+		require.Positive(t, types["installed_software"])
+		require.Positive(t, types["installed_app_store_app"])
+	})
+
+	t.Run("task activities are independent of policy_membership", func(t *testing.T) {
+		// Modifying a policy's query or targets wipes/prunes policy_membership.
+		// Automation history must survive that, so deleting all membership rows
+		// for the policy must not drop the script/software/VPP activities.
+		_, err := ds.writer(ctx).ExecContext(ctx, `DELETE FROM policy_membership WHERE policy_id = ?`, policy.ID)
+		require.NoError(t, err)
+
+		activities, _, err := ds.ListPolicyAutomationActivities(ctx, policy.ID, adminFilter, listOpts(), "")
+		require.NoError(t, err)
+		types := make(map[string]int)
+		for _, a := range activities {
+			types[a.Type]++
+		}
 		require.Positive(t, types["ran_script"])
 		require.Positive(t, types["installed_software"])
 		require.Positive(t, types["installed_app_store_app"])
